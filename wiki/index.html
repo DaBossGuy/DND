@@ -1,35 +1,69 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>Campaign Wiki</title>
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
   <meta name="description" content="Description">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-  
+
   <!-- 1. The Theme (You can find others like 'dark.css' online) -->
-  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
-  
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
+
   <style>
     /* Optional: Make it look a bit more "D&D" */
-    :root { --theme-color: #4CAF50; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    :root {
+      --theme-color: #b6200c;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .app-name-link {
+      font-size: xx-large;
+      font-weight: bolder;
+    }
+
+    .sidebar-nav {
+      font-size: x-large;
+      color: #ff0000;
+    }
+
+    .markdown-section em {
+      color: #c8c8c8;
+    }
+
+    .markdown-section strong {
+      color: #c8c8c8;
+    }
+
+    #returner {
+      color: #ff0000;
+      font-size: 20px;
+      text-decoration: underline;
+      
+    }
   </style>
 </head>
+
 <body>
   <div id="app">Loading Wiki...</div>
-  
+
   <script>
     window.$docsify = {
-      name: 'Campaign Lore', // The name in the sidebar
+      name: '<b>The World of Liden</b>', // The name in the sidebar
       repo: '',              // Link to your repo (optional)
       loadSidebar: true,     // Enable sidebar for navigation
-      subMaxLevel: 2,        // Generate Table of Contents from headers
-      auto2top: true         // Scroll to top when changing pages
+      subMaxLevel: 3,        // Generate Table of Contents from headers
+      auto2top: true,         // Scroll to top when changing pages
+      autoHeader: false,
     }
   </script>
-  
+
   <!-- 2. The Engine -->
   <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
 </body>
+
 </html>

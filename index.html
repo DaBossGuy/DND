@@ -1,86 +1,142 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <title>The World Map</title>
+  <title>Liden</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body, html { height: 100%; margin: 0; font-family: sans-serif; }
-    #map { height: 100%; width: 100%; background: #0e0e0e; }
-    
+    body,
+    html {
+      height: 100%;
+      margin: 0;
+      font-family: sans-serif;
+    }
+
+    #map {
+      height: 100%;
+      width: 100%;
+      background: #0e0e0e;
+    }
+
     /* Marker Colors */
-    .marker-red { filter: hue-rotate(140deg); }
-    .marker-green { filter: hue-rotate(260deg); }
-    .marker-gold { filter: invert(100%) sepia(100%) saturate(500%) hue-rotate(0deg) brightness(100%) contrast(100%); }
-    .marker-violet { filter: hue-rotate(45deg); }
-    .marker-black { filter: grayscale(100%) brightness(40%); }
-    h2 {margin-bottom: 0px;}
+    .marker-red {
+      filter: hue-rotate(140deg);
+    }
+
+    .marker-green {
+      filter: hue-rotate(260deg);
+    }
+
+    .marker-gold {
+      filter: invert(100%) sepia(100%) saturate(500%) hue-rotate(0deg) brightness(100%) contrast(100%);
+    }
+
+    .marker-violet {
+      filter: hue-rotate(45deg);
+    }
+
+    .marker-black {
+      filter: grayscale(100%) brightness(40%);
+    }
+
+    h2 {
+      margin-bottom: 0px;
+    }
   </style>
 </head>
+
 <body>
   <div id="map"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // --- CONFIGURATION ---
-    const mapWidth = 1502;  
-    const mapHeight = 937; 
-    const mapUrl = 'LIDEN MAP.png'; 
+    const mapWidth = 1502;
+    const mapHeight = 937;
+    const mapUrl = 'LIDEN MAP.png';
     // ---------------------
 
     // --- PASTE YOUR DATA HERE ---
     // Delete the "[]" below and paste the code from your builder tool
     const savedMarkers = [
-  {
-    "id": 1768684087368,
-    "y": 518,
-    "x": 192,
-    "desc": "Sylvayne \\nDesert city at war with the Winds of Rebellion",
-    "color": "gold"
-  },
-  {
-    "id": 1768684558244,
-    "y": 614.5,
-    "x": 364,
-    "desc": "<h2> Rindmill</h2>\nEeker",
-    "color": "red"
-  },
-  {
-    "id": 1768689304861,
-    "y": 436,
-    "x": 209.5,
-    "desc": "<b>Beeker</b>",
-    "color": "red"
-  }
-]; 
+      {
+        "id": 1768684087368,
+        "y": 518,
+        "x": 192,
+        "desc": "Sylvayne\nDesert city at war with the Winds of Rebellion",
+        "color": "gold"
+      },
+      {
+        "id": 1768684558244,
+        "y": 614.5,
+        "x": 364,
+        "desc": "Rindmill\nA small livestock town.\nGoober ba boober.",
+        "color": "red"
+      },
+      {
+        "id": 1768689304861,
+        "y": 436,
+        "x": 209.5,
+        "desc": "Beeker",
+        "color": "red"
+      }
+    ];
     // ----------------------------
 
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2 });
     const bounds = [[0, 0], [mapHeight, mapWidth]];
     L.imageOverlay(mapUrl, bounds).addTo(map);
     map.fitBounds(bounds);
+    map.setView([470, 700], .25)
 
     // Loop through the data and create the markers
     savedMarkers.forEach(data => {
       let colorClass = '';
-      if(data.color === 'red') colorClass = 'marker-red';
-      else if(data.color === 'green') colorClass = 'marker-green';
-      else if(data.color === 'gold') colorClass = 'marker-gold';
-      else if(data.color === 'violet') colorClass = 'marker-violet';
-      else if(data.color === 'black') colorClass = 'marker-black';
+      if (data.color === 'red') colorClass = 'marker-red';
+      else if (data.color === 'green') colorClass = 'marker-green';
+      else if (data.color === 'gold') colorClass = 'marker-gold';
+      else if (data.color === 'violet') colorClass = 'marker-violet';
+      else if (data.color === 'black') colorClass = 'marker-black';
 
       const customIcon = L.icon({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
         iconAnchor: [12, 41], popupAnchor: [1, -34], className: colorClass
       });
-      
-      const formattedDesc = data.desc.replace(/\n/g, '<br>');
+
+            // 1. Split the raw text into an array of lines
+      const lines = data.desc.trim().split('\n');
+
+      // 2. The Title is the first line
+      const title = lines[0];
+
+      // 3. The Body is everything else (slice starts at index 1, skipping index 0)
+      const bodyText = lines.slice(1).join('<br>');
+
+      // 4. Generate the filename slug (Title -> filename)
+      // "Rindmill" -> "rindmill" | "City of Solna" -> "city-of-solna"
+      const slug = title.toLowerCase().trim().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+
+      // 5. Build the HTML
+      // Note: We use ${bodyText} here, not the full description
+      const popupContent = `
+        <div style="text-align:center; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:5px;">
+          <a href="wiki/#/${slug}" target="_blank" style="font-size:16px; font-weight:bold; text-decoration:none; color:#3388ff;">
+            <h2>${title}</h2>
+          </a>
+        </div>
+        <div style="font-size:13px; line-height:1.4;">
+          ${bodyText}
+        </div>
+      `;
+      // --- NEW TEXT LOGIC END ---
 
       L.marker([data.y, data.x], {icon: customIcon})
        .addTo(map)
-       .bindPopup("<b>" + formattedDesc + "</b>");
+       .bindPopup(popupContent);
     });
   </script>
 </body>
+
 </html>
