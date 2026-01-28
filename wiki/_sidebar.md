@@ -1,6 +1,6 @@
-* [Liden Map](/index.html ':ignore :id=returner')
+* [Back to the Map](../index.html ':ignore :id=returner')
 * Locations
   * [Rindmill](rindmill.md)
-  * [Brimborne](brimborne.md)
+  * [Sylvayne](sylvayne.md)
 * NPCs
-  
+  * [Adamance](npc-adamance.md)

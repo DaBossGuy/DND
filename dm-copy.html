@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>D&D Map - Advanced Builder</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    body, html { height: 100%; margin: 0; font-family: sans-serif; }
+    #map { height: 100%; width: 100%; background: #0e0e0e; }
+
+    /* UI Controls */
+    #controls {
+      position: absolute; top: 10px; right: 10px; z-index: 1000;
+      background: white; padding: 10px; border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      display: flex; flex-direction: column; gap: 5px;
+      width: 200px;
+    }
+    button { cursor: pointer; padding: 5px 10px; }
+    .mode-active { background-color: #4CAF50; color: white; }
+
+    /* Popup Styling */
+    .edit-input {
+      width: 100%; 
+      min-height: 80px; /* Taller box */
+      padding: 5px; 
+      box-sizing: border-box;
+      margin-bottom: 5px; 
+      border: 1px solid #ccc; 
+      border-radius: 3px;
+      font-family: sans-serif;
+      resize: vertical; /* Allow user to resize height */
+    }
+    .popup-btn-row {
+      display: flex;
+      gap: 5px;
+    }
+    .btn-save { flex: 1; background-color: #4CAF50; color: white; border: none; padding: 5px; border-radius: 3px; cursor: pointer; }
+    .btn-del  { flex: 1; background-color: #ff4444; color: white; border: none; padding: 5px; border-radius: 3px; cursor: pointer; }
+    .popup-help { font-size: 10px; color: #666; font-style: italic; margin-top: 3px; text-align: right;}
+
+    /* Export Modal */
+    #export-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 2000;
+      align-items: center; justify-content: center;
+    }
+    #export-box {
+      background: white; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    textarea.export-area { width: 100%; height: 200px; margin-top: 10px; font-family: monospace; }
+    
+    /* Marker Colors */
+    .marker-red { filter: hue-rotate(140deg); }
+    .marker-green { filter: hue-rotate(260deg); }
+    .marker-gold { filter: invert(100%) sepia(100%) saturate(500%) hue-rotate(0deg) brightness(100%) contrast(100%); }
+    .marker-violet { filter: hue-rotate(45deg); }
+    .marker-black { filter: grayscale(100%) brightness(40%); }
+    h2 {margin-bottom: 0px;}
+  </style>
+</head>
+<body>
+
+  <div id="controls">
+    <strong>DM Tools</strong>
+    <button id="btn-toggle" onclick="toggleEditMode()">Enable Edit Mode</button>
+    <button onclick="clearAllData()">Clear All Markers</button>
+    <button onclick="openExportModal()">Get Code for Release</button>
+    <div id="status" style="font-size: 12px; color: #666; margin-top:5px;">Mode: View Only</div>
+  </div>
+
+  <div id="export-overlay">
+    <div id="export-box">
+      <h3>Map Data Ready</h3>
+      <p>Copy the code below. Then paste it into your <b>Release File</b>.</p>
+      <textarea id="export-text" class="export-area" readonly></textarea>
+      <div style="margin-top: 10px; text-align: right;">
+        <button onclick="closeExportModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    // --- CONFIGURATION ---
+    const mapWidth = 3840;
+    const mapHeight = 2160;
+    const mapUrl = 'liden.png';
+    // ---------------------
+
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2 });
+    const bounds = [[0, 0], [mapHeight, mapWidth]];
+    L.imageOverlay(mapUrl, bounds).addTo(map);
+    map.fitBounds(bounds);
+
+    let editMode = false;
+    let markersData = JSON.parse(localStorage.getItem('dnd_map_markers')) || [];
+    let markerLayers = {}; 
+
+    function loadMarkers() {
+      for (let id in markerLayers) map.removeLayer(markerLayers[id]);
+      markerLayers = {};
+      markersData.forEach(data => createMarkerOnMap(data));
+    }
+
+    function createMarkerOnMap(data) {
+      let colorClass = '';
+      if(data.color === 'red') colorClass = 'marker-red';
+      else if(data.color === 'green') colorClass = 'marker-green';
+      else if(data.color === 'gold') colorClass = 'marker-gold';
+      else if(data.color === 'violet') colorClass = 'marker-violet';
+      else if(data.color === 'black') colorClass = 'marker-black';
+
+      const customIcon = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconAnchor: [12, 41], popupAnchor: [1, -34], className: colorClass
+      });
+
+      const marker = L.marker([data.y, data.x], { 
+        icon: customIcon,
+        draggable: editMode 
+      }).addTo(map);
+
+      markerLayers[data.id] = marker;
+      updateMarkerPopup(marker, data);
+
+      marker.on('dragend', function(e) {
+        const newPos = e.target.getLatLng();
+        updateData(data.id, { y: newPos.lat, x: newPos.lng });
+      });
+    }
+
+    // --- POPUP LOGIC ---
+    function updateMarkerPopup(marker, data) {
+      if (editMode) {
+        // Edit Mode: Textarea + Buttons
+        const content = `
+          <textarea id="input-${data.id}" class="edit-input" onkeydown="checkKey(event, ${data.id})">${data.desc}</textarea>
+          <div class="popup-btn-row">
+            <button class="btn-save" onclick="saveDesc(${data.id})">Save</button>
+            <button class="btn-del" onclick="deleteMarker(${data.id})">Delete</button>
+          </div>
+          <div class="popup-help">Shift+Enter to save</div>
+        `;
+        marker.bindPopup(content, { minWidth: 250 }); // Wider popup for typing
+      } else {
+        // View Mode: Convert newlines (\n) to HTML breaks (<br>)
+        // We use a regex replace to handle the conversion
+        const displayDesc = data.desc.replace(/\n/g, '<br>');
+        marker.bindPopup(`<b>${displayDesc}</b>`);
+      }
+    }
+
+    // Handle Keys (Shift+Enter to save)
+    window.checkKey = function(e, id) {
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault(); // Stop new line
+        saveDesc(id);
+      }
+    }
+
+    // Save Button Click
+    window.saveDesc = function(id) {
+      const inputVal = document.getElementById('input-' + id).value;
+      updateData(id, { desc: inputVal });
+      map.closePopup(); 
+    }
+
+    function updateData(id, updates) {
+      const index = markersData.findIndex(m => m.id === id);
+      if (index !== -1) {
+        markersData[index] = { ...markersData[index], ...updates };
+        localStorage.setItem('dnd_map_markers', JSON.stringify(markersData));
+        if (markerLayers[id]) updateMarkerPopup(markerLayers[id], markersData[index]);
+      }
+    }
+
+    map.on('click', function(e) {
+      if (!editMode) return;
+      const color = prompt("New Marker Color (red, green, gold, violet, black):", "red");
+      if (color === null) return; 
+
+      const newMarker = { 
+        id: Date.now(), y: e.latlng.lat, x: e.latlng.lng, 
+        desc: "New Location", 
+        color: color ? color.toLowerCase() : 'blue' 
+      };
+
+      markersData.push(newMarker);
+      localStorage.setItem('dnd_map_markers', JSON.stringify(markersData));
+      createMarkerOnMap(newMarker);
+    });
+
+    function toggleEditMode() {
+      editMode = !editMode;
+      const btn = document.getElementById('btn-toggle');
+      const status = document.getElementById('status');
+
+      if (editMode) {
+        btn.classList.add('mode-active');
+        btn.innerText = "Disable Edit Mode";
+        status.innerText = "Mode: Drag pins or Click to edit";
+        document.getElementById('map').style.cursor = "crosshair";
+      } else {
+        btn.classList.remove('mode-active');
+        btn.innerText = "Enable Edit Mode";
+        status.innerText = "Mode: View Only";
+        document.getElementById('map').style.cursor = "grab";
+      }
+
+      // Refresh all popups to switch between Input/Text view
+      markersData.forEach(data => {
+        const marker = markerLayers[data.id];
+        if (marker) {
+          if (editMode) marker.dragging.enable();
+          else marker.dragging.disable();
+          updateMarkerPopup(marker, data);
+        }
+      });
+    }
+
+    window.deleteMarker = function(id) {
+      markersData = markersData.filter(m => m.id !== id);
+      localStorage.setItem('dnd_map_markers', JSON.stringify(markersData));
+      map.removeLayer(markerLayers[id]);
+      delete markerLayers[id];
+    }
+
+    window.clearAllData = function() {
+      if(confirm("Delete all markers?")) {
+        localStorage.removeItem('dnd_map_markers');
+        markersData = [];
+        loadMarkers();
+      }
+    }
+
+    window.openExportModal = function() {
+      const output = JSON.stringify(markersData, null, 2);
+      document.getElementById('export-text').value = output;
+      document.getElementById('export-overlay').style.display = 'flex';
+    }
+
+    window.closeExportModal = function() {
+      document.getElementById('export-overlay').style.display = 'none';
+    }
+
+    loadMarkers();
+  </script>
+</body>
+</html>

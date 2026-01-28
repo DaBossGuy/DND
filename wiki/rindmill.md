@@ -1,9 +1,12 @@
 # Rindmill
 
-This is a small livestock town and shiz.
+A medium-sized agricultural city.
 
-!> ***-Eeker bo Beeker***
+!> ***FUN FACT: The campaign started here!***
 
-## Beeker's Legacy
-asd
-[leeker](../index.html ':ignore')
+## Rule
+Ruled by King Demeter XIV
+
+## NPCs
+[Adamance](npc-adamance.html)
+
